@@ -10,43 +10,96 @@ app = Flask(__name__)
 
 def scrap(url):
     #This is fuction for scrapping
-    url_get = requests.get(url)
+    url_get = requests.get('https://www.imdb.com/search/title/?release_date=2019-01-01,2019-12-31')
     soup = BeautifulSoup(url_get.content,"html.parser")
+    lister = soup.find_all('div', attrs={'class':'lister-item-content'})
     
     #Find the key to get the information
-    table = soup.find(___) 
-    tr = table.find_all(___) 
+    # buat cangkang
+    popno = []
+    titles = []
+    imdb_ratings = []
+    metascores = []
+    votes = []
 
-    temp = [] #initiating a tuple
-
-    for i in range(1, len(tr)):
-        row = table.find_all('tr')[i]
-        #use the key to take information here
-        #name_of_object = row.find_all(...)[0].text
-
-
-
-
-
-
-        temp.append((___)) #append the needed information 
+    # ambil data per movie
+    for onelist in lister:
     
-    temp = temp[::-1] #remove the header
+        # berpatok ke metascore
+        # kalau metascore ga none berarti isi masing2 kolom seperti apa?
+        if onelist.find('div', class_ = 'inline-block ratings-metascore') is not None:
+        
+            # urutan
+            urut = onelist.h3.span.text
+            urut = urut.strip()
+            popno.append(urut)
+        
+            # judul
+            title = onelist.h3.a.text
+            title = title.strip()
+            titles.append(title)
+        
+            # imdb rating
+            ratings = float(onelist.strong.text)
+            imdb_ratings.append(ratings)
+        
+            # metascore
+            mscore = onelist.find('div', attrs={'class':'inline-block ratings-metascore'}).span.text
+            mscore = int(mscore)/10
+            metascores.append(float(mscore))
+        
+            # votes
+            vote = onelist.find('span', attrs={'name':'nv'})['data-value']
+            votes.append(int(vote))
 
-    df = pd.DataFrame(temp, columns = (___)) #creating the dataframe
-   #data wranggling -  try to change the data type to right data type
-
-   #end of data wranggling
+        # kalau metascore none berarti isi masing2 kolom seperti apa?
+        if onelist.find('div', class_ = 'inline-block ratings-metascore') is None:
+        
+            # urutan
+            urut = onelist.h3.span.text
+            urut = urut.strip()
+            popno.append(urut)
+        
+            # judul
+            title = onelist.h3.a.text
+            title = title.strip()
+            titles.append(title)
+        
+            # imdb rating
+            ratings = float(onelist.strong.text)
+            imdb_ratings.append(ratings)
+        
+            # metascore
+            mscore = 0.0
+            metascores.append(float(mscore))
+        
+            # votes
+            vote = onelist.find('span', attrs={'name':'nv'})['data-value']
+            votes.append(int(vote))
+        
+    # dari cangkang yang dah dibuat disusun jadi df
+    df = pd.DataFrame({
+    'popularity_order': popno,
+    'film_title': titles,
+    'imdb': imdb_ratings,
+    'metascore': metascores,
+    'votes': votes
+    })
+    
+    df['popularity_order'] = df['popularity_order'].replace('[\.]','',regex=True).astype('int64')
+    df['film_title'] = df['film_title'].replace('Gisaengchung','Parasite')
+    df = df.sort_values('popularity_order', ascending=True)
+    df = df.drop(columns='popularity_order').set_index('film_title').head(7)
 
     return df
 
 @app.route("/")
 def index():
-    df = scrap(___) #insert url here
+    df = scrap('https://www.imdb.com/search/title/?release_date=2019-01-01,2019-12-31') #insert url here
 
     #This part for rendering matplotlib
     fig = plt.figure(figsize=(5,2),dpi=300)
-    df.plot()
+    df.drop(columns='votes').plot(kind='barh', width=0.5, align='center').legend(bbox_to_anchor=(1,1), loc=2)
     
     #Do not change this part
     plt.savefig('plot1',bbox_inches="tight") 
@@ -60,8 +113,7 @@ def index():
     #this is for rendering the table
     df = df.to_html(classes=["table table-bordered table-striped table-dark table-condensed"])
 
-    return render_template("index.html", table=df, result=result)
-
-
+    return render_template("index_copy1.html", table=df, result=result)    
+    
 if __name__ == "__main__": 
     app.run(debug=True)
