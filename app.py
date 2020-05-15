@@ -1,3 +1,4 @@
+# import library
 from flask import Flask, render_template 
 import pandas as pd
 import requests
@@ -9,12 +10,12 @@ import matplotlib.pyplot as plt
 app = Flask(__name__)
 
 def scrap(url):
-    #This is fuction for scrapping
+    # This is function for scrapping
     url_get = requests.get('https://www.imdb.com/search/title/?release_date=2019-01-01,2019-12-31')
     soup = BeautifulSoup(url_get.content,"html.parser")
     lister = soup.find_all('div', attrs={'class':'lister-item-content'})
     
-    #Find the key to get the information
+    # Find the key to get the information
     # buat cangkang
     popno = []
     titles = []
@@ -43,12 +44,12 @@ def scrap(url):
             ratings = float(onelist.strong.text)
             imdb_ratings.append(ratings)
         
-            # metascore
+            # metascore dibagi 10 biar bandingin ke imdb rating lebih enak
             mscore = onelist.find('div', attrs={'class':'inline-block ratings-metascore'}).span.text
             mscore = int(mscore)/10
             metascores.append(float(mscore))
-        
-            # votes
+                    
+            # votes, ambil data value langsung biar ga usa repot ilangin koma
             vote = onelist.find('span', attrs={'name':'nv'})['data-value']
             votes.append(int(vote))
 
@@ -69,10 +70,10 @@ def scrap(url):
             ratings = float(onelist.strong.text)
             imdb_ratings.append(ratings)
         
-            # metascore
+            # metascore karena none type dan biar datanya bisa ketarik juga, di nol in aja
             mscore = 0.0
             metascores.append(float(mscore))
-        
+                    
             # votes
             vote = onelist.find('span', attrs={'name':'nv'})['data-value']
             votes.append(int(vote))
@@ -86,10 +87,14 @@ def scrap(url):
     'votes': votes
     })
     
+    # ilangin titik di peringkat popularitas
     df['popularity_order'] = df['popularity_order'].replace('[\.]','',regex=True).astype('int64')
+    
+    # pas saya tarik masi nama korea jadi biar sesuai tampilan imdb di replace aja
     df['film_title'] = df['film_title'].replace('Gisaengchung','Parasite')
-    df = df.sort_values('popularity_order', ascending=True)
-    df = df.drop(columns='popularity_order').set_index('film_title').head(7)
+    
+    # disortir ulang biar keurut sm tampilan imdb
+    df = df.sort_values('popularity_order', ascending=True).set_index('popularity_order')
 
     return df
 
@@ -97,23 +102,29 @@ def scrap(url):
 def index():
     df = scrap('https://www.imdb.com/search/title/?release_date=2019-01-01,2019-12-31') #insert url here
 
-    #This part for rendering matplotlib
+    # This part for rendering matplotlib
     fig = plt.figure(figsize=(5,2),dpi=300)
-    df.drop(columns='votes').plot(kind='barh', width=0.5, align='center').legend(bbox_to_anchor=(1,1), loc=2)
     
-    #Do not change this part
+    # plot yg mau dishow cuma top 7 tingkat popularitas
+    # untuk keperluan analisa sort value nya pakai imdb rating
+    df.head(7).sort_values('imdb',ascending=False).set_index('film_title').\
+    drop(columns=['metascore','votes']).\
+    plot(kind='barh', width=0.5, align='center')
+    
+    # Do not change this part
     plt.savefig('plot1',bbox_inches="tight") 
     figfile = BytesIO()
     plt.savefig(figfile, format='png')
     figfile.seek(0)
     figdata_png = base64.b64encode(figfile.getvalue())
     result = str(figdata_png)[2:-1]
-    #This part for rendering matplotlib
+    # This part for rendering matplotlib
 
-    #this is for rendering the table
+    # this is for rendering the table
     df = df.to_html(classes=["table table-bordered table-striped table-dark table-condensed"])
 
+    # biar tampilan kesusun sesuai template dipanggil index_copy1 dari folder template
     return render_template("index_copy1.html", table=df, result=result)    
     
 if __name__ == "__main__": 
-    app.run(debug=True)
+    app.run(debug=True) # biar error log kelihatan
