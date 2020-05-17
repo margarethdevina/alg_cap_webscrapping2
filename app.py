@@ -10,73 +10,136 @@ import matplotlib.pyplot as plt
 app = Flask(__name__)
 
 def scrap(url):
-    # This is function for scrapping
-    url_get = requests.get('https://www.imdb.com/search/title/?release_date=2019-01-01,2019-12-31')
-    soup = BeautifulSoup(url_get.content,"html.parser")
-    lister = soup.find_all('div', attrs={'class':'lister-item-content'})
     
-    # Find the key to get the information
     # buat cangkang
     popno = []
     titles = []
     imdb_ratings = []
     metascores = []
-    votes = []
-
-    # ambil data per movie
-    for onelist in lister:
+    votes = []   
     
-        # berpatok ke metascore
-        # kalau metascore ga none berarti isi masing2 kolom seperti apa?
-        if onelist.find('div', class_ = 'inline-block ratings-metascore') is not None:
+    # untuk tarik data di page pertama karena format url beda, page lainnya dilooping terpisah
+    url_get = requests.get('https://www.imdb.com/search/title/?release_date=2019-01-01,2019-12-31&ref_=adv_nxt')
+    soup = BeautifulSoup(url_get.content,"html.parser")
+    lister = soup.find_all('div', attrs={'class':'lister-item-content'})
+    if lister is not None:
+      
+    # ambil data per movie
+        for onelist in lister:
+    
+            # berpatok ke metascore
+            # kalau metascore ga none berarti isi masing2 kolom seperti apa?
+            if onelist.find('div', class_ = 'inline-block ratings-metascore') is not None:
         
-            # urutan
-            urut = onelist.h3.span.text
-            urut = urut.strip()
-            popno.append(urut)
+                # urutan
+                urut = onelist.h3.span.text
+                urut = urut.strip()
+                popno.append(urut)
         
-            # judul
-            title = onelist.h3.a.text
-            title = title.strip()
-            titles.append(title)
+                # judul
+                title = onelist.h3.a.text
+                title = title.strip()
+                titles.append(title)
         
-            # imdb rating
-            ratings = float(onelist.strong.text)
-            imdb_ratings.append(ratings)
+                # imdb rating
+                ratings = float(onelist.strong.text)
+                imdb_ratings.append(ratings)
         
-            # metascore dibagi 10 biar bandingin ke imdb rating lebih enak
-            mscore = onelist.find('div', attrs={'class':'inline-block ratings-metascore'}).span.text
-            mscore = int(mscore)/10
-            metascores.append(float(mscore))
+                # metascore dibagi 10 biar bandingin ke imdb rating lebih enak
+                mscore = onelist.find('div', attrs={'class':'inline-block ratings-metascore'}).span.text
+                mscore = int(mscore)/10
+                metascores.append(float(mscore))
                     
-            # votes, ambil data value langsung biar ga usa repot ilangin koma
-            vote = onelist.find('span', attrs={'name':'nv'})['data-value']
-            votes.append(int(vote))
+                # votes, ambil data value langsung biar ga usa repot ilangin koma
+                vote = onelist.find('span', attrs={'name':'nv'})['data-value']
+                votes.append(int(vote))
 
-        # kalau metascore none berarti isi masing2 kolom seperti apa?
-        if onelist.find('div', class_ = 'inline-block ratings-metascore') is None:
+            # kalau metascore none berarti isi masing2 kolom seperti apa?
+            if onelist.find('div', class_ = 'inline-block ratings-metascore') is None:
         
-            # urutan
-            urut = onelist.h3.span.text
-            urut = urut.strip()
-            popno.append(urut)
+                # urutan
+                urut = onelist.h3.span.text
+                urut = urut.strip()
+                popno.append(urut)
         
-            # judul
-            title = onelist.h3.a.text
-            title = title.strip()
-            titles.append(title)
+                # judul
+                title = onelist.h3.a.text
+                title = title.strip()
+                titles.append(title)
         
-            # imdb rating
-            ratings = float(onelist.strong.text)
-            imdb_ratings.append(ratings)
-        
-            # metascore karena none type dan biar datanya bisa ketarik juga, di nol in aja
-            mscore = 0.0
-            metascores.append(float(mscore))
+                # imdb rating
+                ratings = float(onelist.strong.text)
+                imdb_ratings.append(ratings)
+            
+                # metascore karena none type dan biar datanya bisa ketarik juga, di nol in aja
+                mscore = 0.0
+                metascores.append(float(mscore))
                     
-            # votes
-            vote = onelist.find('span', attrs={'name':'nv'})['data-value']
-            votes.append(int(vote))
+                # votes
+                vote = onelist.find('span', attrs={'name':'nv'})['data-value']
+                votes.append(int(vote))
+    
+    # untuk tarik data di page kedua dst
+    pages = [str(i) for i in range(51,150,50)]
+    for page in pages:
+        url_get = requests.get('https://www.imdb.com/search/title/?release_date=2019-01-01,2019-12-31&start='+page+'&ref_=adv_nxt')
+        soup = BeautifulSoup(url_get.content,"html.parser")
+        lister = soup.find_all('div', attrs={'class':'lister-item-content'})
+      
+    # ambil data per movie
+        for onelist in lister:
+    
+            # berpatok ke metascore
+            # kalau metascore ga none berarti isi masing2 kolom seperti apa?
+            if onelist.find('div', class_ = 'inline-block ratings-metascore') is not None:
+        
+                # urutan
+                urut = onelist.h3.span.text
+                urut = urut.strip()
+                popno.append(urut)
+        
+                # judul
+                title = onelist.h3.a.text
+                title = title.strip()
+                titles.append(title)
+        
+                # imdb rating
+                ratings = float(onelist.strong.text)
+                imdb_ratings.append(ratings)
+        
+                # metascore dibagi 10 biar bandingin ke imdb rating lebih enak
+                mscore = onelist.find('div', attrs={'class':'inline-block ratings-metascore'}).span.text
+                mscore = int(mscore)/10
+                metascores.append(float(mscore))
+                    
+                # votes, ambil data value langsung biar ga usa repot ilangin koma
+                vote = onelist.find('span', attrs={'name':'nv'})['data-value']
+                votes.append(int(vote))
+
+            # kalau metascore none berarti isi masing2 kolom seperti apa?
+            if onelist.find('div', class_ = 'inline-block ratings-metascore') is None:
+        
+                # urutan
+                urut = onelist.h3.span.text
+                urut = urut.strip()
+                popno.append(urut)
+        
+                # judul
+                title = onelist.h3.a.text
+                title = title.strip()
+                titles.append(title)
+        
+                # imdb rating
+                ratings = float(onelist.strong.text)
+                imdb_ratings.append(ratings)
+            
+                # metascore karena none type dan biar datanya bisa ketarik juga, di nol in aja
+                mscore = 0.0
+                metascores.append(float(mscore))
+                    
+                # votes
+                vote = onelist.find('span', attrs={'name':'nv'})['data-value']
+                votes.append(int(vote))
         
     # dari cangkang yang dah dibuat disusun jadi df
     df = pd.DataFrame({
